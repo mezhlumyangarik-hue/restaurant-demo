@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ռոյալ Արարատ - Պրեմիում Ռեստորան</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23dfb73c'><path d='M2 4l3 7 7-9 7 9 3-7-1 15H3L2 4zm1 13h18v2H3v-2z'/></svg>">
+    <style>
+        .category-title { color: #dfb73c; font-size: 24px; text-transform: uppercase; letter-spacing: 2px; margin: 40px 0 20px 0; border-bottom: 1px dashed #333; padding-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="successToast" class="success-toast">
+        <i class="fas fa-check-circle"></i>
+        <p>Պատվերը հաջողությամբ գրանցվեց սերվերում։</p>
+    </div>
+
+    <header>
+        <div class="logo" style="display: flex; align-items: center; gap: 8px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 4L5 11L12 2L19 11L22 4L21 19H3L2 4ZM3 17H21V19H3V17Z" fill="#dfb73c"/>
+            </svg>
+            <span>ROYAL ARARAT<span class="gold-dot">.</span></span>
+        </div>
+        <nav>
+            <a href="#" class="dropdown-trigger" onclick="toggleHeaderMenu(event)">
+                <i class="fas fa-bars"></i> ՄԵՆՅՈՒ
+            </a>
+            <a href="#booking" class="nav-btn">ՕՆԼԱՅՆ ՊԱՏՎԵՐ</a>
+            <a href="/admin" class="nav-btn" style="border-color: #dfb73c; color: #dfb73c;">ԱԴՄԻՆ</a>
+            <a href="tel:+37496787855" class="call-btn">
+                <i class="fas fa-phone-alt"></i> <span>ԶԱՆԳԱՀԱՐԵԼ</span>
+            </a>
+        </nav>
+    </header>
+
+    <div id="headerDropdownMenu" class="mega-menu-overlay">
+        <div class="mega-menu-content">
+            <div class="mega-menu-header">
+                <h2><span class="gold-text">ԱՅԲԲԵՆԱԿԱՆ</span> ՄԵՆՅՈՒ</h2>
+                <button class="close-mega-btn" onclick="closeHeaderMenu()">&times;</button>
+            </div>
+            <div class="gold-line"></div>
+            <div id="megaMenuGrid" class="mega-menu-grid"></div>
+        </div>
+    </div>
+
+    <section class="hero">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <span class="subtitle">PREMIUM RESTAURANT & LOUNGE</span>
+            <h1>Գաստրոնոմիկ<br><span class="gold-text">Արվեստ և Շքեղություն</span></h1>
+            <p>Նուրբ հայկական համեր՝ ժամանակակից պրեմիում մատուցմամբ:</p>
+            <a href="#booking" class="btn btn-gold">ԱՄՐԱԳՐԵԼ ՀԱՎԱՔՈՒՅԹ</a>
+        </div>
+    </section>
+
+    <section id="menu" class="menu-section">
+        <div class="section-title">
+            <span class="title-tag">ԳՈՒՐՄԵ ՏԵՍԱԿԱՆԻ</span>
+            <h2>Ընտիր Մենյու</h2>
+            <div class="gold-line"></div>
+        </div>
+
+        <div class="search-container">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="menuSearch" placeholder="Որոնել ձեր նախընտրած ուտեստը..." onkeyup="filterMenu()">
+        </div>
+
+        <div class="menu-container-box">
+            
+            {% for category in categories %}
+                <h3 class="category-title">
+                    {% if category == 'Տաք Ուտեստներ' %}<i class="fas fa-hotdog"></i>
+                    {% elif category == 'Աղցաններ' %}<i class="fas fa-seedling"></i>
+                    {% elif category == 'Նախուտեստներ' %}<i class="fas fa-cheese"></i>
+                    {% elif category == 'Խավարտներ' %}<i class="fas fa-drumstick-bite"></i>
+                    {% elif category == 'Ըմպելիքներ' %}<i class="fas fa-glass-martini-alt"></i>
+                    {% elif category == 'Աղանդեր' %}<i class="fas fa-birthday-cake"></i>
+                    {% else %}<i class="fas fa-utensils"></i>{% endif %}
+                    {{ category }}
+                </h3>
+                
+                <div class="menu-grid">
+                    {% if custom_dishes %}
+                        {% for dish in custom_dishes if dish.category == category %}
+                        <div class="menu-item" onclick="openOrderModal(this.dataset.name, Number(this.dataset.price), this.dataset.img)" data-name="{{ dish.name }}" data-price="{{ dish.price }}" data-img="{{ dish.image_url }}">
+                            <img src="{{ dish.image_url }}" class="item-img" alt="{{ dish.name }}">
+                            <div class="item-info">
+                                <div class="item-header">
+                                    <h3>{{ dish.name }}</h3>
+                                    <span class="price">{{ dish.price }} ֏</span>
+                                </div>
+                                <p class="desc">{{ dish.description or '' }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+        </div>
+    </section>
+
+    <section id="booking" class="booking-section">
+        <div class="booking-card">
+            <h2>Պատվերի Ձևակերպում</h2>
+            <p class="gold-text" style="margin-bottom: 25px;">Շքեղ միջավայր և բարձրակարգ սպասարկում</p>
+            
+            <form id="bookingForm" onsubmit="sendOrderToPythonDatabase(event)">
+                <div class="input-group full-width">
+                    <select id="orderType" onchange="toggleTableSelection()" required>
+                        <option value="table_and_food">Ամրագրել Շքեղ Սեղան + Ուտելիք</option>
+                        <option value="only_food">Միայն Ուտելիք (Տանելու / Takeaway)</option>
+                    </select>
+                </div>
+
+                <div class="input-group responsive-box">
+                    <input type="text" id="custName" placeholder="Ձեր Անունը" required>
+                    <input type="tel" id="custPhone" placeholder="Հեռախոսահամար" required>
+                </div>
+                
+                <div class="input-group responsive-box">
+                    <input type="date" id="custDate" required>
+                    <select id="custTime" required>
+                        <option value="" disabled selected>Ընտրեք Ժամը</option>
+                        <option value="18:00">18:00</option>
+                        <option value="19:00">19:00</option>
+                        <option value="20:00">20:00</option>
+                    </select>
+                </div>
+
+                <div id="tableSelectionBlock">
+                    <div class="input-group responsive-box">
+                        <input type="number" id="custGuests" placeholder="Հոգիների քանակը" min="1" value="1">
+                        <select id="custEvent">
+                            <option value="Ընթրիք" selected>Հավաքույթի Տեսակը (Ընթրիք)</option>
+                            <option value="Ծննդյան Տոն">Ծննդյան Տոն</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group responsive-box">
+                        <select id="zoneType" onchange="updateTableNumbers()">
+                            <option value="Ընդհանուր Սրահ">Ընդհանուր Մեծ Սրահ</option>
+                            <option value="Առանդնասենյակ (Կուպե)">Առանձնասենյակ (Կուպե V.I.P)</option>
+                        </select>
+                        <select id="tableNumber"></select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-gold btn-block">ՀԱՍՏԱՏԵԼ ՊԱՏՎԵՐԸ</button>
+            </form>
+        </div>
+    </section>
+
+    <div id="orderModal" class="sidebar">
+        <div class="sidebar-header">
+            <h3 id="modalSidebarTitle">ԸՆՏՐՎԱԾ ՈՒՏԵՍՏ</h3>
+            <button class="close-btn" onclick="closeOrderModal()">&times;</button>
+        </div>
+        <div class="sidebar-content">
+            <div id="modalDishImgContainer" class="modal-preview-img-box">
+                <img id="modalDishImg" src="" alt="Preview">
+            </div>
+            <h4 id="modalDishName" class="gold-text"></h4>
+            <p id="modalDishPrice" class="modal-price"></p>
+            <div id="cartItemsList" class="cart-items-list-container"></div>
+            <div id="quantityBlock" class="order-action-box">
+                <label for="dishQty">Պատվիրվող Քանակը՝</label>
+                <input type="number" id="dishQty" value="1" min="1" onchange="updateTotal()">
+                <div class="total-box">ՎԵՐՋՆԱԿԱՆ ԳԻՆ՝ <br><span id="modalTotal" class="gold-text">0</span> ֏</div>
+                <button class="btn btn-gold w-100" onclick="confirmDishOrder()">ԱՎԵԼԱՑՆԵԼ ԶԱՄԲՅՈՒՂԻՆ</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="floating-cart" onclick="openCartSidebar()">
+        <i class="fas fa-shopping-bag"></i>
+        <span id="cartCount" class="cart-badge">0</span>
+    </div>
+
+    <footer class="luxury-footer">
+        <div class="footer-container">
+            <div class="footer-block about-us">
+                <div class="footer-logo" style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2 4L5 11L12 2L19 11L22 4L21 19H3L2 4ZM3 17H21V19H3V17Z" fill="#dfb73c"/>
+                    </svg>
+                    <span>ROYAL ARARAT<span class="gold-dot">.</span></span>
+                </div>
+                <p class="footer-text">Պրեմիում դասի ռեստորանային համալիր՝ իսկական գուրմանների համար։ Վայելեք բարձրակարգ սպասարկում և անմոռանալի համեր։</p>
+                <div class="footer-socials">
+                    <a href="#" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" target="_blank"><i class="fab fa-instagram"></i></a>
+                    <a href="#" target="_blank"><i class="fab fa-tiktok"></i></a> 
+                    <a href="#" target="_blank"><i class="fab fa-tripadvisor"></i></a>
+                </div>
+            </div>
+
+            <div class="footer-block quick-links">
+                <h3>ԱՐԱԳ ՀՂՈՒՄՆԵՐ</h3>
+                <ul>
+                    <li><a href="#">Գլխավոր Էջ</a></li>
+                    <li><a href="#menu">Ընտիր Մենյու</a></li>
+                    <li><a href="#booking">Ամրագրում</a></li>
+                    <li><a href="#">Մեր Մասին</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-block work-hours">
+                <h3>ԱՇԽԱՏԱՆՔԱՅԻՆ ԺԱՄԵՐ</h3>
+                <ul>
+                    <li><span>Երկուշաբթի - Ուրբաթ:</span> 12:00 - 00:00</li>
+                    <li><span>Շաբաթ - Կիրակի:</span> 12:00 - 02:00</li>
+                    <li><small class="gold-text">* Խոհանոցը փակվում է ժամը 23:30-ին</small></li>
+                </ul>
+            </div>
+
+            <div class="footer-block footer-contact">
+                <h3>ԿԱՊ ՄԵԶ ՀԵՏ</h3>
+                <ul>
+                    <li><a href="tel:+37499000000"><i class="fas fa-phone-alt"></i> +374 (99) 00-00-00</a></li>
+                    <li><a href="tel:+37410112233"><i class="fas fa-phone-alt"></i> +374 (10) 11-22-33</a></li>
+                    <li><i class="fas fa-map-marker-alt"></i> Հայաստան, Երևան, Մաշտոցի Պողոտա 1</li>
+                    <li><i class="fas fa-envelope"></i> info@royalararat.am</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-line"></div>
+        <p class="copyright">&copy; 2026 ROYAL ARARAT. Բոլոր իրավունքները պաշտպանված են:</p>
+    </footer>
+
+    <script>
+        let cartArray = []; let currentPrice = 0; let currentDish = ""; let currentImg = "";
+
+        function setMinimumDate() {
+            let today = new Date().toISOString().split('T')[0];
+            document.getElementById('custDate').setAttribute('min', today);
+        }
+
+        function filterMenu() {
+            let input = document.getElementById('menuSearch').value.toLowerCase();
+            let items = document.getElementsByClassName('menu-item');
+            for (let i = 0; i < items.length; i++) {
+                let title = items[i].querySelector('h3').innerText.toLowerCase();
+                items[i].style.display = title.includes(input) ? "flex" : "none";
+            }
+        }
+
+        function openOrderModal(name, price, imgUrl) {
+            currentDish = name; currentPrice = price; currentImg = imgUrl;
+            document.getElementById('modalSidebarTitle').innerText = "ԸՆՏՐՎԱԾ ՈՒՏԵՍՏ";
+            document.getElementById('modalDishName').innerText = name;
+            document.getElementById('modalDishPrice').innerText = price.toLocaleString() + " ֏";
+            document.getElementById('modalDishImg').src = imgUrl;
+            document.getElementById('modalDishImgContainer').style.display = "block";
+            document.getElementById('cartItemsList').style.display = "none";
+            document.getElementById('dishQty').value = 1;
+            document.getElementById('quantityBlock').style.display = "flex";
+            updateTotal();
+            document.body.classList.add('sidebar-active'); 
+            document.getElementById('orderModal').classList.add('open');
+        }
+
+        function closeOrderModal() { 
+            document.getElementById('orderModal').classList.remove('open'); 
+            document.body.classList.remove('sidebar-active');
+        }
+        
+        function updateTotal() {
+            let qty = document.getElementById('dishQty').value;
+            document.getElementById('modalTotal').innerText = (currentPrice * qty).toLocaleString();
+        }
+
+        function confirmDishOrder() {
+            let qty = parseInt(document.getElementById('dishQty').value) || 1;
+            let existingItem = cartArray.find(item => item.name === currentDish);
+            if (existingItem) { existingItem.qty += qty; } 
+            else { cartArray.push({ name: currentDish, price: currentPrice, img: currentImg, qty: qty }); }
+            updateCartBadge(); closeOrderModal();
+        }
+
+        function updateCartBadge() { document.getElementById('cartCount').innerText = cartArray.reduce((sum, item) => sum + item.qty, 0); }
+
+        function openCartSidebar() {
+            document.getElementById('modalSidebarTitle').innerText = "ՁԵՐ ԶԱՄԲՅՈՒՂԸ";
+            document.getElementById('modalDishImgContainer').style.display = "none";
+            document.getElementById('quantityBlock').style.display = "none";
+            let listContainer = document.getElementById('cartItemsList');
+            listContainer.style.display = "block"; listContainer.innerHTML = "";
+
+            if (cartArray.length === 0) {
+                document.getElementById('modalDishName').innerText = "Զամբյուղը դատարկ է";
+                document.getElementById('modalDishPrice').innerText = "";
+            } else {
+                document.getElementById('modalDishName').innerText = "Ընթացիկ Պատվերներ";
+                let grandTotal = 0;
+                cartArray.forEach((item, index) => {
+                    let itemTotal = item.price * item.qty; grandTotal += itemTotal;
+                    listContainer.innerHTML += `
+                        <div class="cart-list-item" style="position: relative; display: flex; align-items: center; margin-bottom: 12px; padding-right: 35px;">
+                            <img src="${item.img}" class="cart-item-mini-img" style="width: 40px; height: 40px; object-fit: cover; margin-right: 10px;">
+                            <div class="cart-item-details" style="flex: 1;">
+                                <h5 style="margin: 0; font-size: 14px;">${item.name}</h5>
+                                <p style="margin: 2px 0 0 0; font-size: 12px; color: #aaa;">${item.qty} հատ x ${item.price.toLocaleString()} ֏</p>
+                            </div>
+                            <div class="cart-item-total-price" style="font-weight: bold; font-size: 14px; color: #dfb73c;">${itemTotal.toLocaleString()} ֏</div>
+                            <button onclick="removeFromCart(${index})" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: none; border: none; color: #6b151f; font-size: 20px; cursor: pointer; font-weight: bold; padding: 5px;">&times;</button>
+                        </div>`;
+                });
+                document.getElementById('modalDishPrice').innerText = `Ընդհանուր՝ ${grandTotal.toLocaleString()} ֏`;
+            }
+            document.body.classList.add('sidebar-active'); document.getElementById('orderModal').classList.add('open');
+        }
+
+        function removeFromCart(index) {
+            cartArray.splice(index, 1);
+            updateCartBadge();
+            openCartSidebar();
+        }
+
+        async function sendOrderToPythonDatabase(event) {
+            event.preventDefault();
+            if (cartArray.length === 0) {
+                alert("Խնդրում ենք մենյուից գոնե մեկ ուտեստ ավելացնել զամբյուղի մեջ պատվերը հաստատելուց առաջ։");
+                return;
+            }
+
+            let orderData = {
+                order_type: document.getElementById('orderType').value,
+                name: document.getElementById('custName').value,
+                phone: document.getElementById('custPhone').value,
+                date: document.getElementById('custDate').value,
+                time: document.getElementById('custTime').value,
+                guests: document.getElementById('custGuests') ? document.getElementById('custGuests').value : 1,
+                event_type: document.getElementById('custEvent') ? document.getElementById('custEvent').value : '',
+                zone_type: document.getElementById('zoneType') ? document.getElementById('zoneType').value : '',
+                table_number: document.getElementById('tableNumber') ? document.getElementById('tableNumber').value : '',
+                cart_items: cartArray
+            };
+
+            try {
+                let response = await fetch('/book', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderData)
+                });
+
+                let result = await response.json();
+                if (result.status === "success") {
+                    let toast = document.getElementById('successToast');
+                    toast.classList.add('show');
+                    
+                    cartArray = []; 
+                    updateCartBadge(); 
+                    document.getElementById('bookingForm').reset();
+                    toggleTableSelection();
+                    
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                    }, 3000);
+                } else {
+                    alert("Սխալ տեղի ունեցավ պատվերը գրանցելիս։");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Կապի սխալ սերվերի հետ։");
+            }
+        }
+
+        function toggleTableSelection() {
+            let orderType = document.getElementById('orderType').value;
+            let block = document.getElementById('tableSelectionBlock');
+            if (orderType === 'only_food') {
+                block.style.display = 'none';
+                document.getElementById('custGuests').removeAttribute('required');
+            } else {
+                block.style.display = 'block';
+                document.getElementById('custGuests').setAttribute('required', 'required');
+            }
+        }
+
+        function updateTableNumbers() {
+            let zone = document.getElementById('zoneType').value;
+            let tableSelect = document.getElementById('tableNumber'); 
+            if(!tableSelect) return;
+            tableSelect.innerHTML = '';
+            let count = zone === 'Ընդհանուր Սրահ' ? 15 : 5;
+            let prefix = zone === 'Ընդհանուր Սրահ' ? 'Սեղան №' : 'VIP Կուպե №';
+            for (let i = 1; i <= count; i++) { tableSelect.innerHTML += `<option value="${prefix}${i}">${zone} - ${prefix}${i}</option>`; }
+        }
+
+        function toggleHeaderMenu(event) {
+            event.preventDefault(); generateAlphabeticalMegaMenu();
+            document.getElementById('headerDropdownMenu').classList.add('open');
+        }
+        function closeHeaderMenu() { document.getElementById('headerDropdownMenu').classList.remove('open'); }
+
+        function generateAlphabeticalMegaMenu() {
+            let items = document.getElementsByClassName('menu-item'); let dishesArray = [];
+            for (let i = 0; i < items.length; i++) {
+                let h3Element = items[i].querySelector('h3');
+                let priceElement = items[i].querySelector('.price');
+                let imgElement = items[i].querySelector('.item-img');
+                if (h3Element && priceElement && imgElement) {
+                    dishesArray.push({ name: h3Element.innerText, price: priceElement.innerText, img: imgElement.src });
+                }
+            }
+            dishesArray.sort((a, b) => a.name.localeCompare(b.name, 'hy'));
+            let grid = document.getElementById('megaMenuGrid'); grid.innerHTML = ''; 
+            dishesArray.forEach(dish => {
+                let card = document.createElement('div'); card.className = 'mega-menu-item-card';
+                card.innerHTML = `<div class="m-title">${dish.name}</div><div class="m-price">${dish.price}</div>`;
+                card.onclick = function() { openOrderModal(dish.name, parseInt(dish.price.replace(/[^0-9]/g, '')), dish.img); closeHeaderMenu(); };
+                grid.appendChild(card);
+            });
+        }
+        
+        window.onload = function() {
+            updateTableNumbers();
+            setMinimumDate();
+        };
+    </script>
+</body>
+</html>

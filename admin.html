@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ռոյալ Արարատ - Ադմինիստրատորի Պանել</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23dfb73c'><path d='M2 4l3 7 7-9 7 9 3-7-1 15H3L2 4zm1 13h18v2H3v-2z'/></svg>">
+    <style>
+        body { background-color: #0d0d0d; color: #ffffff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        .admin-wrapper { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #dfb73c; padding-bottom: 20px; margin-bottom: 30px; }
+        .admin-title { font-size: 24px; color: #dfb73c; letter-spacing: 1px; }
+        .nav-links { display: flex; gap: 10px; }
+        .btn-back, .btn-logout { background: transparent; border: 1px solid #dfb73c; color: #dfb73c; padding: 10px 20px; text-decoration: none; font-weight: bold; transition: 0.3s; font-size: 13px; text-transform: uppercase; }
+        .btn-back:hover, .btn-logout:hover { background: #dfb73c; color: #000; }
+        .btn-logout { border-color: #e74c3c; color: #e74c3c; }
+        .btn-logout:hover { background: #e74c3c; color: white; }
+        .admin-tabs { display: flex; gap: 15px; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .tab-btn { background: #1a1a1a; border: 1px solid #333; color: #aaa; padding: 12px 25px; cursor: pointer; font-weight: bold; transition: 0.3s; text-transform: uppercase; font-size: 14px; }
+        .tab-btn:hover, .tab-btn.active { color: #dfb73c; border-color: #dfb73c; }
+        .tab-btn.active { background: #dfb73c; color: #0d0d0d; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .luxury-table { width: 100%; border-collapse: collapse; background: #111; margin-top: 20px; }
+        .luxury-table th, .luxury-table td { padding: 15px; text-align: left; border-bottom: 1px solid #222; }
+        .luxury-table th { background: #1a1a1a; color: #dfb73c; text-transform: uppercase; font-size: 12px; }
+        .item-mini-img { width: 50px; height: 50px; object-fit: cover; border: 1px solid #dfb73c; }
+        .btn-delete { background: #6b151f; color: white; border: none; padding: 6px 12px; cursor: pointer; }
+        .btn-delete:hover { background: red; }
+        .status-select { background: #222; color: #dfb73c; border: 1px solid #dfb73c; padding: 5px; cursor: pointer; }
+        .luxury-form { background: #111; border: 1px solid #222; padding: 30px; max-width: 600px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #dfb73c; font-size: 14px; text-transform: uppercase; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; background: #1a1a1a; border: 1px solid #333; color: white; box-sizing: border-box; }
+        .btn-submit { background: #dfb73c; color: black; border: none; padding: 12px 30px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+    <div class="admin-wrapper">
+        <div class="admin-header">
+            <div class="admin-title"><i class="fas fa-crown"></i> ROYAL ARARAT — ՄԵՆԵՋՄԵՆԹ</div>
+            <div class="nav-links">
+                <a href="/" class="btn-back"><i class="fas fa-store"></i> Ռեստորան</a>
+                <a href="/logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Ելք</a>
+            </div>
+        </div>
+
+        <div class="admin-tabs">
+            <button class="tab-btn active" onclick="switchTab('orders')">📦 Պատվերներ</button>
+            <button class="tab-btn" onclick="switchTab('menu-items')">🍔 Մենյուի Ցուցակ</button>
+            <button class="tab-btn" onclick="switchTab('add-item')">➕ Ավելացնել Ուտեստ</button>
+        </div>
+
+        <div id="orders" class="tab-content active">
+            <h2>Հաճախորդների Պատվերներ</h2>
+            <table class="luxury-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Անուն / Հեռախոս</th>
+                        <th>Տեսակ / Տեղ</th>
+                        <th>Ամսաթիվ</th>
+                        <th>Ուտեստներ</th>
+                        <th>Ընդհանուր Գումար</th>
+                        <th>Կարգավիճակ</th>
+                        <th>Ջնջել</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if orders %}
+                        {% for order in orders %}
+                        <tr>
+                            <td>#{{ order.id }}</td>
+                            <td><strong>{{ order.name }}</strong><br><small>{{ order.phone }}</small></td>
+                            <td>{{ order.order_type }}<br><small>{{ order.table_number }}</small></td>
+                            <td>{{ order.date }}<br><small>{{ order.time }}</small></td>
+                            <td>
+                                {% for item in order.cart_items %}
+                                    • {{ item.name }} ({{ item.qty }} հատ)<br>
+                                {% endfor %}
+                            </td>
+                            <td style="color:#dfb73c; font-weight:bold;">{{ order.total_price }} ֏</td>
+                            <td>
+                                <select class="status-select" onchange="updateStatus('{{ order.id }}', this.value)">
+                                    <option value="Նոր" {% if order.status == 'Նոր' %}selected{% endif %}>Նոր</option>
+                                    <option value="Պատրաստվում է" {% if order.status == 'Պատրաստվում է' %}selected{% endif %}>Պատրաստվում է</option>
+                                    <option value="Կատարված" {% if order.status == 'Կատարված' %}selected{% endif %}>Կատարված</option>
+                                </select>
+                            </td>
+                            <td>
+                                <button class="btn-delete" onclick="deleteOrder('{{ order.id }}')"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="8" style="text-align: center; color: #666;">Պատվերներ չկան։</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="menu-items" class="tab-content">
+            <h2>Մենյուի Կատալոգ</h2>
+            <table class="luxury-table">
+                <thead>
+                    <tr>
+                        <th>Նկար</th>
+                        <th>Անվանում</th>
+                        <th>Կատեգորիա</th>
+                        <th>Գին</th>
+                        <th>Գործողություն</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if custom_dishes %}
+                        {% for dish in custom_dishes %}
+                        <tr>
+                            <td><img src="{{ dish.image_url }}" class="item-mini-img"></td>
+                            <td><strong>{{ dish.name }}</strong><br><small style="color: #666;">{{ dish.description }}</small></td>
+                            <td><span style="border: 1px solid #dfb73c; padding:3px 8px; color:#dfb73c;">{{ dish.category }}</span></td>
+                            <td style="color: #dfb73c;">{{ dish.price }} ֏</td>
+                            <td><button class="btn-delete" onclick="deleteDish('{{ dish.name }}')">Ջնջել</button></td>
+                        </tr>
+                        {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="add-item" class="tab-content">
+            <h2>Ավելացնել Ուտեստ / Ըմպելիք</h2>
+            <div class="luxury-form">
+                <form action="/admin/add-dish" method="POST" enctype="multipart/form-data">
+                    <div class="form-group"><label>Անվանում</label><input type="text" name="name" required></div>
+                    <div class="form-group">
+                        <label>Կատալոգ</label>
+                        <select name="category" required>
+                            <option value="Տաք Ուտեստներ">Տաք Ուտեստներ</option>
+                            <option value="Նախուտեստներ">Նախուտեստներ</option>
+                            <option value="Ըմպելիքներ">Ըմպելիքներ</option>
+                            <option value="Աղանդեր">Աղանդեր</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Գին</label><input type="number" name="price" required></div>
+                    <div class="form-group"><label>Նկար (Upload)</label><input type="file" name="image_file" accept="image/*"></div>
+                    <div class="form-group"><label>Նկարագրություն</label><textarea name="description" rows="3"></textarea></div>
+                    <button type="submit" class="btn-submit">Ավելացնել</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+        async function updateStatus(id, status) {
+            await fetch('/admin/update-status', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: id, status: status})
+            });
+        }
+        async function deleteDish(name) {
+            if(confirm("Ջնջե՞լ մենյուից:")) {
+                await fetch('/admin/delete-dish', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: name}) });
+                location.reload();
+            }
+        }
+        async function deleteOrder(id) {
+            if(confirm("Ջնջե՞լ պատվերը:")) {
+                await fetch('/admin/delete-order', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) });
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
