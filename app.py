@@ -3,15 +3,13 @@ import sqlite3
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 
 app = Flask(__name__)
-app.secret_key = 'super_secret_royal_ararat_key' # Սեսիայի համար
+app.secret_key = 'super_secret_royal_ararat_key'
 app.wsgi_app = app  # Պարտադիր է Vercel-ի համար
 
-# Որոշում ենք բազայի ճանապարհը՝ կախված նրանից, թե որտեղ է աշխատում կայքը
+# Բազայի ճիշտ դիրքը Vercel-ի և լոկալի համար
 if os.environ.get('VERCEL'):
-    # Vercel-ի վրա օգտագործում ենք in-memory SQLite բազա, որպեսզի ֆայլային համակարգին չկպնի
     DB_PATH = ':memory:'
 else:
-    # Լոկալ կամ Render-ի վրա ստեղծում ենք ֆիզիկական ֆայլ
     if os.path.exists('/opt/render/project/src'):
         PERSISTENT_DIR = '/opt/render/project/src/instance'
     else:
@@ -48,7 +46,7 @@ def init_db():
         )
     ''')
     
-    # Զամբյուղի ուտեստներ
+    # Զամբյուղ
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS order_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,7 +58,7 @@ def init_db():
         )
     ''')
     
-    # Ուտեստների աղյուսակ
+    # Ուտեստներ
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS menu_dishes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,30 +75,19 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
-    # ԱՎՏՈՄԱՏ ՄԵՆՅՈՒԻ ԼՑՆՈՒՄ (ԲՈԼՈՐ ԲԱԺԻՆՆԵՐՈՎ)
+    # Ավտոմատ մենյուի լցնում
     cursor.execute("SELECT COUNT(*) FROM menu_dishes")
     if cursor.fetchone()[0] == 0:
         sample_dishes = [
-            # Տաք Ուտեստներ
             ("Արարատյան Խորոված", 4500, "https://images.unsplash.com/photo-1544025162-d76694265947?w=500", "Ընտիր խոզի միջուկ՝ հատուկ համեմունքներով", "Տաք Ուտեստներ"),
             ("Քյուֆթա", 3800, "https://images.unsplash.com/photo-1608897013039-887f21d8c804?w=500", "Ավանդական էջմիածնի քյուֆթա՝ հալած կարագով", "Տաք Ուտեստներ"),
-            
-            # Աղցաններ
             ("Ամառային Աղցան", 1500, "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500", "Թարմ լոլիկ, վարունգ, կանաչի և ձիթայուղ", "Աղցաններ"),
             ("Հունական Աղցան", 2200, "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500", "Ֆետա պանիր, ձիթապտուղ, թարմ բանջարեղեն", "Աղցաններ"),
-
-            # Նախուտեստներ
             ("Հայկական Պանրի Տեսականի", 3000, "https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?w=500", "Լոռի, Չանախ, Մոցարելլա՝ թարմ կանաչիով", "Նախուտեստներ"),
             ("Մսային Ասորտի", 4000, "https://images.unsplash.com/photo-1544025162-d76694265947?w=500", "Բաստուրմա, Սուջուխ, Խոզապուխտ", "Նախուտեստներ"),
-
-            # Խավարտներ
             ("Կարտոֆիլ Ֆրի", 1000, "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=500", "Ոսկեգույն, խրթխրթան կարտոֆիլ", "Խավարտներ"),
-
-            # Ըմպելիքներ
             ("Տնական Թան", 600, "https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=500", "Թարմ մածունով և դաղձով", "Ըմպելիքներ"),
             ("Բնական Հյութ", 1200, "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=500", "Նռան կամ նարնջի թարմ քամած հյութ", "Ըմպելիքներ"),
-
-            # Աղանդեր
             ("Գաթա Երևանյան", 1200, "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500", "Խրթխրթան շերտավոր խմոր՝ քաղցր խորիզով", "Աղանդեր"),
             ("Փախլավա", 1500, "https://images.unsplash.com/photo-1519676867240-f03562e64548?w=500", "Ընկույզով և մեղրով ավանդական փախլավա", "Աղանդեր")
         ]
@@ -112,25 +99,16 @@ def init_db():
     conn.commit()
     conn.close()
 
-# ԲԱԶԱՆ ՍՏԵՂԾՈՒՄ ԵՆՔ ԱՎՏՈՄԱՏ
-# Բայց եթե Vercel-ի վրա ենք, կանչում ենք ամեն անգամ, քանի որ այն հիշողության (RAM) մեջ է
-if os.environ.get('VERCEL'):
-    init_db()
-else:
-    # Լոկալ համակարգչիդ վրա կաշխատի սովորականի պես
-    init_db()
+init_db()
 
 @app.route('/')
 def index():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
     cursor.execute("SELECT * FROM menu_dishes")
     custom_dishes = [dict(row) for row in cursor.fetchall()]
-    
     categories = sorted(list(set(dish['category'] for dish in custom_dishes if dish['category'])))
-    
     conn.close()
     return render_template('index.html', custom_dishes=custom_dishes, categories=categories)
 
@@ -141,7 +119,6 @@ def book_order():
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("PRAGMA foreign_keys = ON;")
-        
         cursor.execute('''
             INSERT INTO bookings (order_type, name, phone, date, time, guests, event_type, zone_type, table_number, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Նոր')
@@ -170,7 +147,7 @@ def login():
         if username == 'admin' and password == '123':
             session['logged_in'] = True
             return redirect(url_for('admin_panel'))
-        return "Սխալ տվյալներ։ Հետ գնացեք ու նորից փորձեք։"
+        return "Սխալ տվյալներ։"
     return '''
         <style>
             body { background: #0d0d0d; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; }
@@ -199,7 +176,6 @@ def admin_panel():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
     cursor.execute("SELECT * FROM bookings ORDER BY id DESC")
     bookings = [dict(row) for row in cursor.fetchall()]
     
@@ -207,29 +183,22 @@ def admin_panel():
     for b in bookings:
         cursor.execute("SELECT dish_name AS name, quantity AS qty, price FROM order_items WHERE booking_id = ?", (b['id'],))
         cart_items = [dict(item_row) for item_row in cursor.fetchall()]
-        
-        total_price = sum(item['price'] * item['qty'] for item in cart_items)
-        
         b['cart_items'] = cart_items
-        b['total_price'] = total_price
+        b['total_price'] = sum(item['price'] * item['qty'] for item in cart_items)
         orders_list.append(b)
         
     cursor.execute("SELECT * FROM menu_dishes ORDER BY id DESC")
     dishes_list = [dict(row) for row in cursor.fetchall()]
     conn.close()
-    
     return render_template('admin.html', orders=orders_list, custom_dishes=dishes_list)
 
 @app.route('/admin/update-status', methods=['POST'])
 def update_status():
     if not session.get('logged_in'): return jsonify({"status": "unauthorized"}), 401
     data = request.get_json()
-    booking_id = data.get('id')
-    new_status = data.get('status')
-    
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("UPDATE bookings SET status = ? WHERE id = ?", (new_status, booking_id))
+    cursor.execute("UPDATE bookings SET status = ? WHERE id = ?", (data.get('status'), data.get('id')))
     conn.commit()
     conn.close()
     return jsonify({"status": "success"})
@@ -238,11 +207,10 @@ def update_status():
 def delete_order_api():
     if not session.get('logged_in'): return jsonify({"status": "unauthorized"}), 401
     data = request.get_json()
-    booking_id = data.get('id')
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("PRAGMA foreign_keys = ON;")
-    cursor.execute("DELETE FROM bookings WHERE id = ?", (booking_id,))
+    cursor.execute("DELETE FROM bookings WHERE id = ?", (data.get('id'),))
     conn.commit()
     conn.close()
     return jsonify({"status": "success"})
@@ -254,10 +222,9 @@ def add_dish():
     price = request.form.get('price')
     category = request.form.get('category')
     description = request.form.get('description')
-    
-    file = request.files.get('image_file')
     image_url = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'
     
+    file = request.files.get('image_file')
     if file and file.filename != '':
         file_path = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(file_path)
@@ -277,10 +244,9 @@ def add_dish():
 def delete_dish():
     if not session.get('logged_in'): return jsonify({"status": "unauthorized"}), 401
     data = request.get_json()
-    dish_name = data.get('name')
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM menu_dishes WHERE name = ?", (dish_name,))
+    cursor.execute("DELETE FROM menu_dishes WHERE name = ?", (data.get('name'),))
     conn.commit()
     conn.close()
     return jsonify({"status": "success"})
