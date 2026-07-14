@@ -1,22 +1,28 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
-import sqlite3
 import os
+import sqlite3
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_royal_ararat_key' # Սեսիայի համար
+app.wsgi_app = app  # Պարտադիր է Vercel-ի համար
 
-# Render-ի և լոկալ համակարգչի համատեղելիության համար
-if os.path.exists('/opt/render/project/src'):
-    PERSISTENT_DIR = '/opt/render/project/src/instance'
+# Որոշում ենք բազայի ճանապարհը՝ կախված նրանից, թե որտեղ է աշխատում կայքը
+if os.environ.get('VERCEL'):
+    # Vercel-ի վրա օգտագործում ենք in-memory SQLite բազա, որպեսզի ֆայլային համակարգին չկպնի
+    DB_PATH = ':memory:'
 else:
-    PERSISTENT_DIR = os.path.join(os.getcwd(), 'instance')
+    # Լոկալ կամ Render-ի վրա ստեղծում ենք ֆիզիկական ֆայլ
+    if os.path.exists('/opt/render/project/src'):
+        PERSISTENT_DIR = '/opt/render/project/src/instance'
+    else:
+        PERSISTENT_DIR = os.path.join(os.getcwd(), 'instance')
 
-if not os.path.exists(PERSISTENT_DIR):
-    os.makedirs(PERSISTENT_DIR)
+    if not os.path.exists(PERSISTENT_DIR):
+        os.makedirs(PERSISTENT_DIR)
+    
+    DB_PATH = os.path.join(PERSISTENT_DIR, 'restaurant.db')
 
-DB_PATH = os.path.join(PERSISTENT_DIR, 'restaurant.db')
 UPLOAD_FOLDER = 'static/uploads'
-
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
@@ -71,9 +77,7 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
-    # ---------------------------------------------------------
     # ԱՎՏՈՄԱՏ ՄԵՆՅՈՒԻ ԼՑՆՈՒՄ (ԲՈԼՈՐ ԲԱԺԻՆՆԵՐՈՎ)
-    # ---------------------------------------------------------
     cursor.execute("SELECT COUNT(*) FROM menu_dishes")
     if cursor.fetchone()[0] == 0:
         sample_dishes = [
@@ -108,23 +112,26 @@ def init_db():
     conn.commit()
     conn.close()
 
+# ԲԱԶԱՆ ՍՏԵՂԾՈՒՄ ԵՆՔ ԱՎՏՈՄԱՏ
+# Բայց եթե Vercel-ի վրա ենք, կանչում ենք ամեն անգամ, քանի որ այն հիշողության (RAM) մեջ է
+if os.environ.get('VERCEL'):
+    init_db()
+else:
+    # Լոկալ համակարգչիդ վրա կաշխատի սովորականի պես
+    init_db()
+
 @app.route('/')
 def index():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
-    # 1. Վերցնում ենք բոլոր ուտեստները
     cursor.execute("SELECT * FROM menu_dishes")
     custom_dishes = [dict(row) for row in cursor.fetchall()]
     
-    # 2. Ավտոմատ գտնում ենք բոլոր ունիկալ կատեգորիաները, որոնք կան բազայում
-    # Օգտագործում ենք `set`, որպեսզի կրկնություններ չլինեն
     categories = sorted(list(set(dish['category'] for dish in custom_dishes if dish['category'])))
     
     conn.close()
-    
-    # HTML-ին փոխանցում ենք թե՛ ուտեստները, թե՛ ավտոմատ հավաքված կատեգորիաները
     return render_template('index.html', custom_dishes=custom_dishes, categories=categories)
 
 @app.route('/book', methods=['POST'])
@@ -155,7 +162,6 @@ def book_order():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# --- ԼՈԳԻՆԻ ԲԱԺԻՆ ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -185,7 +191,6 @@ def logout():
     session.pop('logged_in', None)
     return redirect(url_for('index'))
 
-# --- ԱԴՄԻՆԻ ԲԱԺԻՆՆԵՐ ---
 @app.route('/admin')
 def admin_panel():
     if not session.get('logged_in'):
@@ -279,8 +284,6 @@ def delete_dish():
     conn.commit()
     conn.close()
     return jsonify({"status": "success"})
-
-init_db()
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)
