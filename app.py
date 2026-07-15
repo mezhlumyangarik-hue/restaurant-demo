@@ -76,7 +76,7 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
-    # Ավտոմատ մենյուի լցնում (Հարուստ ցանկ՝ ամեն բաժնում 3-4 համեղ ուտեստներով)
+    # Ավտոմատ մենյուի լցնում (Այստեղ են բոլոր 15 ուտեստները)
     cursor.execute("SELECT COUNT(*) FROM menu_dishes")
     if cursor.fetchone()[0] == 0:
         sample_dishes = [
@@ -202,7 +202,6 @@ def admin_panel():
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
-        # Փորձում ենք կարդալ պատվերները
         cursor.execute("SELECT * FROM bookings ORDER BY id DESC")
         bookings = [dict(row) for row in cursor.fetchall()]
         
@@ -213,7 +212,6 @@ def admin_panel():
             b['total_price'] = sum(item['price'] * item['qty'] for item in cart_items)
             orders_list.append(b)
             
-        # Փորձում ենք կարդալ մենյուի ուտեստները
         cursor.execute("SELECT * FROM menu_dishes ORDER BY id DESC")
         dishes_list = [dict(row) for row in cursor.fetchall()]
         conn.close()
@@ -246,56 +244,4 @@ def delete_order_api():
         cursor.execute("PRAGMA foreign_keys = ON;")
         cursor.execute("DELETE FROM bookings WHERE id = ?", (data.get('id'),))
         conn.commit()
-        conn.close()
-        return jsonify({"status": "success"})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route('/admin/add-dish', methods=['POST'])
-def add_dish():
-    if not session.get('logged_in'): return redirect(url_for('login'))
-    try:
-        name = request.form.get('name')
-        price = request.form.get('price')
-        category = request.form.get('category')
-        description = request.form.get('description')
-        image_url = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'
-        
-        file = request.files.get('image_file')
-        if file and file.filename != '':
-            if not os.environ.get('VERCEL'):
-                file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-                file.save(file_path)
-                image_url = f'/{UPLOAD_FOLDER}/{file.filename}'
-            else:
-                image_url = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'
-
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO menu_dishes (name, price, image_url, description, category)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (name, int(price), image_url, description, category))
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        print("Error adding dish:", e)
-        
-    return redirect('/admin')
-
-@app.route('/admin/delete-dish', methods=['POST'])
-def delete_dish():
-    if not session.get('logged_in'): return jsonify({"status": "unauthorized"}), 401
-    try:
-        data = request.get_json()
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM menu_dishes WHERE name = ?", (data.get('name'),))
-        conn.commit()
-        conn.close()
-        return jsonify({"status": "success"})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000)
+        conn.close
