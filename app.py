@@ -113,13 +113,19 @@ init_db()
 
 @app.route('/')
 def index():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM menu_dishes")
-    custom_dishes = [dict(row) for row in cursor.fetchall()]
-    categories = sorted(list(set(dish['category'] for dish in custom_dishes if dish['category'])))
-    conn.close()
+    custom_dishes = []
+    categories = []
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM menu_dishes")
+        custom_dishes = [dict(row) for row in cursor.fetchall()]
+        categories = sorted(list(set(dish['category'] for dish in custom_dishes if dish['category'])))
+        conn.close()
+    except Exception as e:
+        print("Database error:", e) # Սա կերևա Vercel Logs-ում, բայց կայքը չի կախվի
+    
     return render_template('index.html', custom_dishes=custom_dishes, categories=categories)
 
 @app.route('/book', methods=['POST'])
