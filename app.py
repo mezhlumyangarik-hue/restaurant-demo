@@ -4,7 +4,6 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_royal_ararat_key'
-app.wsgi_app = app  # Պարտադիր է Vercel-ի համար
 
 # Բազայի ճիշտ դիրքը Vercel-ի և լոկալի համար
 if os.environ.get('VERCEL'):
@@ -21,8 +20,10 @@ else:
     DB_PATH = os.path.join(PERSISTENT_DIR, 'restaurant.db')
 
 UPLOAD_FOLDER = 'static/uploads'
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+# Vercel-ի վրա թղթապանակ չենք ստեղծում, քանի որ համակարգը read-only է
+if not os.environ.get('VERCEL'):
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER)
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -75,21 +76,29 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
-    # Ավտոմատ մենյուի լցնում
+    # Ավտոմատ մենյուի լցնում (Ամեն կատեգորիայից ճիշտ 2 հանրաճանաչ ուտեստ)
     cursor.execute("SELECT COUNT(*) FROM menu_dishes")
     if cursor.fetchone()[0] == 0:
         sample_dishes = [
+            # Տաք Ուտեստներ (2 հատ)
             ("Արարատյան Խորոված", 4500, "https://images.unsplash.com/photo-1544025162-d76694265947?w=500", "Ընտիր խոզի միջուկ՝ հատուկ համեմունքներով", "Տաք Ուտեստներ"),
-            ("Քյուֆթա", 3800, "https://images.unsplash.com/photo-1608897013039-887f21d8c804?w=500", "Ավանդական էջմիածնի քյուֆթա՝ հալած կարագով", "Տաք Ուտեստներ"),
+            ("Ավանդական Քյուֆթա", 3800, "https://images.unsplash.com/photo-1608897013039-887f21d8c804?w=500", "Ավանդական էջմիածնի քյուֆթա՝ հալած կարագով", "Տաք Ուտեստներ"),
+            
+            # Աղցաններ (2 հատ)
             ("Ամառային Աղցան", 1500, "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500", "Թարմ լոլիկ, վարունգ, կանաչի և ձիթայուղ", "Աղցաններ"),
             ("Հունական Աղցան", 2200, "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500", "Ֆետա պանիր, ձիթապտուղ, թարմ բանջարեղեն", "Աղցաններ"),
+            
+            # Նախուտեստներ (2 հատ)
             ("Հայկական Պանրի Տեսականի", 3000, "https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?w=500", "Լոռի, Չանախ, Մոցարելլա՝ թարմ կանաչիով", "Նախուտեստներ"),
             ("Մսային Ասորտի", 4000, "https://images.unsplash.com/photo-1544025162-d76694265947?w=500", "Բաստուրմա, Սուջուխ, Խոզապուխտ", "Նախուտեստներ"),
-            ("Կարտոֆիլ Ֆրի", 1000, "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=500", "Ոսկեգույն, խրթխրթան կարտոֆիլ", "Խավարտներ"),
+            
+            # Ըմպելիքներ (2 հատ)
             ("Տնական Թան", 600, "https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=500", "Թարմ մածունով և դաղձով", "Ըմպելիքներ"),
-            ("Բնական Հյութ", 1200, "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=500", "Նռան կամ նարնջի թարմ քամած հյութ", "Ըմպելիքներ"),
+            ("Բնական Նռան Հյութ", 1200, "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=500", "Նռան թարմ քամած հյութ", "Ըմպելիքներ"),
+            
+            # Աղանդեր (2 հատ)
             ("Գաթա Երևանյան", 1200, "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500", "Խրթխրթան շերտավոր խմոր՝ քաղցր խորիզով", "Աղանդեր"),
-            ("Փախլավա", 1500, "https://images.unsplash.com/photo-1519676867240-f03562e64548?w=500", "Ընկույզով և մեղրով ավանդական փախլավա", "Աղանդեր")
+            ("Ավանդական Փախլավա", 1500, "https://images.unsplash.com/photo-1519676867240-f03562e64548?w=500", "Ընկույզով և մեղրով ավանդական փախլավա", "Աղանդեր")
         ]
         cursor.executemany('''
             INSERT INTO menu_dishes (name, price, image_url, description, category)
@@ -99,6 +108,7 @@ def init_db():
     conn.commit()
     conn.close()
 
+# Բազան նախապես միշտ ստեղծվում է (նաև Vercel-ի In-Memory-ի դեպքում)
 init_db()
 
 @app.route('/')
@@ -226,9 +236,13 @@ def add_dish():
     
     file = request.files.get('image_file')
     if file and file.filename != '':
-        file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-        file.save(file_path)
-        image_url = f'/{UPLOAD_FOLDER}/{file.filename}'
+        if not os.environ.get('VERCEL'):
+            file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+            file.save(file_path)
+            image_url = f'/{UPLOAD_FOLDER}/{file.filename}'
+        else:
+            # Եթե Vercel-ի վրա ֆայլ է բեռնվում, դնում ենք default նկար, քանի որ լոկալ պահել չի լինի
+            image_url = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
