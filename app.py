@@ -20,13 +20,16 @@ else:
     DB_PATH = os.path.join(PERSISTENT_DIR, 'restaurant.db')
 
 UPLOAD_FOLDER = 'static/uploads'
-# Vercel-ի վրա թղթապանակ չենք ստեղծում
 if not os.environ.get('VERCEL'):
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
+def init_db(conn=None):
+    should_close = False
+    if conn is None:
+        conn = sqlite3.connect(DB_PATH)
+        should_close = True
+        
     cursor = conn.cursor()
     cursor.execute("PRAGMA foreign_keys = ON;")
     
@@ -76,7 +79,7 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
-    # Ավտոմատ մենյուի լցնում
+    # Ավտոմատ լցնում ենք ուտեստները, եթե աղյուսակը դատարկ է
     cursor.execute("SELECT COUNT(*) FROM menu_dishes")
     if cursor.fetchone()[0] == 0:
         sample_dishes = [
@@ -109,11 +112,10 @@ def init_db():
             INSERT INTO menu_dishes (name, price, image_url, description, category)
             VALUES (?, ?, ?, ?, ?)
         ''', sample_dishes)
+        conn.commit()
 
-    conn.commit()
-    conn.close()
-
-init_db()
+    if should_close:
+        conn.close()
 
 @app.route('/')
 def index():
@@ -121,6 +123,9 @@ def index():
     categories = []
     try:
         conn = sqlite3.connect(DB_PATH)
+        # Ամեն հարցման ժամանակ ապահովության համար կանչում ենք ստեղծումն ու լցնումը
+        init_db(conn)
+        
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM menu_dishes")
@@ -137,6 +142,7 @@ def book_order():
     try:
         data = request.get_json()
         conn = sqlite3.connect(DB_PATH)
+        init_db(conn)
         cursor = conn.cursor()
         cursor.execute("PRAGMA foreign_keys = ON;")
         cursor.execute('''
@@ -198,6 +204,7 @@ def admin_panel():
 
     try:
         conn = sqlite3.connect(DB_PATH)
+        init_db(conn)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
